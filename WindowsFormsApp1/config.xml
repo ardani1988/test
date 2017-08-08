@@ -1,0 +1,12 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<Settings>
+  <BackupSettings>
+    <source>O:\minecraft_tekkit_survival</source>
+    <destination>O:\</destination>
+    <level>NoCompression</level>
+    <schema>{O}_{DU}_{T}</schema>
+  </BackupSettings>
+  <ValidatorSettings>
+    <checkIfDriveExists>true</checkIfDriveExists>
+  </ValidatorSettings>
+</Settings>
