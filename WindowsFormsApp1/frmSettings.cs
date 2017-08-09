@@ -12,11 +12,9 @@ namespace MC_Sicherung
         #region GlobalVariables
 
         ConfigManager conf;
-        ConfigManager orgConf;
         FormValidator fvVal = new FormValidator();
         private static readonly log4net.ILog log = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
-        bool changed = false;
         bool bCancel = false;
 
         #endregion GlobalVariables
@@ -32,9 +30,8 @@ namespace MC_Sicherung
             fvVal.registerValidationHandler(tbSource, new PathValidator(conf.ValidatorSettings.checkIfDriveExists));
             fvVal.registerValidationHandler(tbDestination, new PathValidator(conf.ValidatorSettings.checkIfDriveExists));
 
-            // Copy the actual Config to an new Object so it can be resetted at the end if nessesary
             this.conf = conf;
-            this.orgConf = new ConfigManager(conf);
+            this.conf.takeSnapshot();
 
             // call initSettings to initialize the Controls
             initSettings();
@@ -44,14 +41,13 @@ namespace MC_Sicherung
         public void initSettings()
         {
             log.Info("Entry");
+
             tbSource.Text = this.conf.BackupSettings.source;
             tbDestination.Text = this.conf.BackupSettings.destination;
             cbLevel.SelectedItem = Converter.TypeConverter.CompressionLevelToString(this.conf.BackupSettings.level);
             tbDName.Text = this.conf.BackupSettings.schema;
             cbSaveAsZIP.Checked = this.conf.BackupSettings.saveAsZIP;
-            
-            // IMPORTANT: set this.changed to false at the end of this method. Otherwise it will be set to true from the PropertyChanged Methods
-            this.changed = false;
+         
             log.Info("Exit");
         }
 
@@ -70,7 +66,6 @@ namespace MC_Sicherung
                 if (fvVal.Validate(sender))
                 {
                     conf.BackupSettings.source = tbSource.Text;
-                    this.changed = true;
                 }
             }
             log.Info("Exit");
@@ -87,7 +82,6 @@ namespace MC_Sicherung
                 if (fvVal.Validate(sender))
                 {
                     conf.BackupSettings.destination = tbDestination.Text;
-                    this.changed = true;
                 }
             }
             log.Info("Exit");
@@ -100,7 +94,6 @@ namespace MC_Sicherung
         private void cbLevel_SelectedIndexChanged(object sender, EventArgs e)
         {
             conf.BackupSettings.level = Converter.TypeConverter.ToCompressionLevel(cbLevel.SelectedItem.ToString());
-            this.changed = true;
         }
 
         private void tbSource_Validating(object sender, CancelEventArgs e)
@@ -110,7 +103,6 @@ namespace MC_Sicherung
                 if (fvVal.Validate(sender))
                 {
                     conf.BackupSettings.source = tbSource.Text;
-                    this.changed = true;
                 }
                 else
                 {
@@ -127,7 +119,6 @@ namespace MC_Sicherung
                 if (fvVal.Validate(sender))
                 {
                     conf.BackupSettings.destination = tbDestination.Text;
-                    this.changed = true;
                 }
                 else
                 {
@@ -139,7 +130,6 @@ namespace MC_Sicherung
 
         private void tbDName_TextChanged(object sender, EventArgs e)
         {
-            this.changed = true;
             lblExample.Text = String.Format("Example: {0}", Placeholder.replace(tbDName.Text, conf.BackupSettings.source));
             //ToDo: Validierung: https://de.wikipedia.org/wiki/Dateiname && https://msdn.microsoft.com/de-de/library/twcw2f1c(v=vs.110).aspx
         }
@@ -147,7 +137,6 @@ namespace MC_Sicherung
         private void cbSaveAsZIP_CheckedChanged(object sender, EventArgs e)
         {
             conf.BackupSettings.saveAsZIP = cbSaveAsZIP.Checked;
-            this.changed = true;
         }
 
         #endregion PropertyChanged
@@ -164,15 +153,18 @@ namespace MC_Sicherung
             log.Info("Entry");
             if (IsSaveable(this.Controls))
             {
-                if (this.changed)
+                if (this.conf.hasChanged())
                 {
                     DialogResult dResult = MessageBox.Show("Soll die Konfiguration gespeichert werden?", "Speichern?", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
                     if (dResult == DialogResult.Yes)
-                        if (!conf.saveConfig())
+                        if (!this.conf.saveConfig())
+                        {
                             MessageBox.Show("Die Konfiguration konnte nicht gespeichert werden.", "Fehler", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        }
                         else
                         {
-                            this.changed = false;
+                            if (this.conf.hasSnapshot)
+                                this.conf.deleteSnapshot();
                             log.Debug("Config was saved to file.");
                             log.Info("Exit");
                             this.Close();
@@ -203,17 +195,13 @@ namespace MC_Sicherung
 
         private void frmSettings_FormClosing(object sender, FormClosingEventArgs e)
         {
-            if (this.changed)
+            if (this.conf.hasSnapshot && this.conf.hasChanged())
             {
                 DialogResult dResult = MessageBox.Show("Es gibt ungespeicherte Änderungen. Sollen diese verworfen werden?", "Warning", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
                 if (dResult == DialogResult.Yes)
                 {
-                    conf.BackupSettings.destination = this.orgConf.BackupSettings.destination;
-                    conf.BackupSettings.level = this.orgConf.BackupSettings.level;
-                    conf.BackupSettings.source = this.orgConf.BackupSettings.source;
-                    conf.BackupSettings.schema = this.orgConf.BackupSettings.schema;
-                    conf.BackupSettings.saveAsZIP = this.orgConf.BackupSettings.saveAsZIP;
-                    conf.ValidatorSettings.checkIfDriveExists = this.orgConf.ValidatorSettings.checkIfDriveExists;
+                    if (this.conf.hasSnapshot)
+                        this.conf.revertSnapshot();
                 }
                 else
                 {

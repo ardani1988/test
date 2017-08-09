@@ -29,7 +29,7 @@ namespace MC_Sicherung
             path.Add("ValidatorSettings", "config.xml");
             path.Add("BackupSettings", "config.xml");
 
-            conf = new ConfigManager(path);
+            conf = ConfigManager.GetInstance(path);
             log.Info("Exit");
         }
 
@@ -41,7 +41,7 @@ namespace MC_Sicherung
 
         private void backupToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            frmBackup fBackup = new frmBackup(conf);
+            frmBackup fBackup = new frmBackup();
             fBackup.Show();
         }
 

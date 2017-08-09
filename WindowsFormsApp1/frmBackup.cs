@@ -25,11 +25,12 @@ namespace MC_Sicherung
         ConfigManager conf;
 
 
-        public frmBackup(ConfigManager conf)
+        public frmBackup()
         {
             log.Info("Entry");
             InitializeComponent();
-            this.conf = new ConfigManager(conf);
+            //this.conf = new ConfigManager(conf);
+            this.conf = ConfigManager.GetInstance();
             this.Text += String.Format(" {0} -> {1}\\{2}.zip", this.conf.BackupSettings.source, 
                 this.conf.BackupSettings.destination, Helper.Placeholder.replace(this.conf.BackupSettings.schema, this.conf.BackupSettings.source));
             updateFileProgress = UpdateProgress;
